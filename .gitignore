@@ -1,0 +1,31 @@
+# Project-local runtime and dependencies
+.tools/
+node_modules/
+
+# Build output
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# macOS/editor files
+.DS_Store
+.vscode/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Other editor/project files
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
