@@ -3,11 +3,15 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
-const databasePath = path.join(
+const defaultDatabasePath = path.join(
   currentDirectory,
   "data",
   "appointments.sqlite",
 );
+
+const databasePath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : defaultDatabasePath;
 
 const database = new Database(databasePath);
 
