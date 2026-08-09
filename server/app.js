@@ -2,15 +2,10 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import { appointments } from "./data/appointments.js";
 import { services } from "./data/services.js";
+import { slots } from "./data/slots.js";
 
 const app = express();
 
-const availableSlots = [
-  "上午 09:00",
-  "上午 10:30",
-  "下午 02:00",
-  "下午 03:30",
-];
 
 // 讓伺服器能解析 JSON 格式的請求內容
 app.use(express.json());
@@ -33,6 +28,26 @@ app.get("/api/services", (request, response) => {
   });
 });
 
+// 取得所有時段及其可用狀態
+app.get("/api/slots", (request, response) => {
+  const bookedSlots = new Set(
+    appointments.map((appointment) => appointment.slot),
+  );
+
+  const slotAvailability = slots.map((slot) => ({
+    value: slot,
+    isAvailable: !bookedSlots.has(slot),
+  }));
+
+  response.status(200).json({
+    data: slotAvailability,
+    meta: {
+      total: slotAvailability.length,
+      available: slotAvailability.filter((slot) => slot.isAvailable).length,
+    },
+  });
+});
+
 // 建立預約
 app.post("/api/appointments", (request, response) => {
   const { serviceId, slot } = request.body ?? {};
@@ -50,7 +65,7 @@ app.post("/api/appointments", (request, response) => {
   const normalizedSlot = slot.trim();
 
   // 驗證時段是否存在
-  if (!availableSlots.includes(normalizedSlot)) {
+  if (!slots.includes(normalizedSlot)) {
     return response.status(400).json({
       error: {
         code: "INVALID_SLOT",

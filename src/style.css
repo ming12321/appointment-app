@@ -415,6 +415,11 @@ a:focus-visible {
   width: auto;
 }
 
+.slot-feedback {
+  width: min(calc(100% - 3rem), 1120px);
+  margin: 2rem auto 6rem;
+}
+
 @media (max-width: 600px) {
   .booking-success-details {
     grid-template-columns: 1fr;

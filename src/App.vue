@@ -4,11 +4,15 @@ import ServiceCard from "./components/ServiceCard.vue";
 import BookingPanel from "./components/BookingPanel.vue";
 import { createAppointment } from "./services/appointmentApi.js";
 import { getServices } from "./services/serviceApi.js";
+import { getAvailableSlots } from "./services/slotApi.js";
 
-const availableSlots = ["上午 09:00", "上午 10:30", "下午 02:00", "下午 03:30"];
 const services = ref([]);
 const servicesStatus = ref("loading");
 const servicesErrorMessage = ref("");
+
+const availableSlots = ref([]);
+const slotsStatus = ref("idle");
+const slotsErrorMessage = ref("");
 
 const selectedService = ref(null);
 const selectedSlot = ref("");
@@ -17,6 +21,7 @@ const confirmedBooking = ref(null);
 const errorMessage = ref("");
 
 let latestRequestId = 0;
+let latestSlotsRequestId = 0;
 
 async function loadServices() {
   servicesStatus.value = "loading";
@@ -32,10 +37,39 @@ async function loadServices() {
   }
 }
 
+async function loadAvailableSlots() {
+  const requestId = ++latestSlotsRequestId;
+
+  availableSlots.value = [];
+  slotsStatus.value = "loading";
+  slotsErrorMessage.value = "";
+
+  try {
+    const result = await getAvailableSlots();
+
+    // 忽略已經過期的請求
+    if (requestId !== latestSlotsRequestId) {
+      return;
+    }
+
+    availableSlots.value = result;
+    slotsStatus.value = "success";
+  } catch (error) {
+    if (requestId !== latestSlotsRequestId) {
+      return;
+    }
+
+    availableSlots.value = [];
+    slotsStatus.value = "error";
+    slotsErrorMessage.value =
+      error instanceof Error ? error.message : "無法載入可用時段，請稍後再試。";
+  }
+}
+
 onMounted(loadServices);
 
 function selectService(service) {
-  // 讓先前仍在等待的請求失效
+  // 讓先前仍在等待的預約請求失效
   latestRequestId += 1;
 
   selectedService.value = service;
@@ -43,6 +77,8 @@ function selectService(service) {
   bookingStatus.value = "idle";
   confirmedBooking.value = null;
   errorMessage.value = "";
+
+  loadAvailableSlots();
 }
 
 async function confirmBooking() {
@@ -95,9 +131,13 @@ function retryBooking() {
 
 function resetBooking() {
   latestRequestId += 1;
+  latestSlotsRequestId += 1;
 
   selectedService.value = null;
   selectedSlot.value = "";
+  availableSlots.value = [];
+  slotsStatus.value = "idle";
+  slotsErrorMessage.value = "";
   confirmedBooking.value = null;
   errorMessage.value = "";
   bookingStatus.value = "idle";
@@ -170,9 +210,49 @@ function resetBooking() {
         </div>
       </section>
 
-      <BookingPanel
-        v-if="
+      <section
+        v-if="selectedService && slotsStatus === 'loading'"
+        class="service-feedback slot-feedback"
+        role="status"
+        aria-live="polite"
+      >
+        <p>正在載入可用時段…</p>
+      </section>
+
+      <section
+        v-else-if="selectedService && slotsStatus === 'error'"
+        class="service-feedback slot-feedback"
+        role="alert"
+      >
+        <p>{{ slotsErrorMessage }}</p>
+
+        <button
+          type="button"
+          class="confirm-button"
+          @click="loadAvailableSlots"
+        >
+          重新載入時段
+        </button>
+      </section>
+
+      <section
+        v-else-if="
           selectedService &&
+          slotsStatus === 'success' &&
+          availableSlots.length === 0
+        "
+        class="service-feedback slot-feedback"
+        role="status"
+        aria-live="polite"
+      >
+        <p>目前沒有可用時段，請稍後再試。</p>
+      </section>
+
+      <BookingPanel
+        v-else-if="
+          selectedService &&
+          slotsStatus === 'success' &&
+          availableSlots.length > 0 &&
           bookingStatus !== 'success' &&
           bookingStatus !== 'error'
         "
