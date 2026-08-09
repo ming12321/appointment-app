@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import ServiceCard from "./components/ServiceCard.vue";
 
 const services = [
   {
@@ -77,23 +78,12 @@ function confirmBooking() {
         </div>
 
         <div class="service-list">
-          <article
+          <ServiceCard
             v-for="service in services"
             :key="service.id"
-            class="service-card"
-          >
-            <p class="service-duration">
-              {{ service.duration }}
-            </p>
-
-            <h3>{{ service.name }}</h3>
-
-            <p>{{ service.description }}</p>
-
-            <button type="button" @click="selectService(service)">
-              選擇時段
-            </button>
-          </article>
+            :service="service"
+            @select="selectService"
+          />
         </div>
       </section>
 
