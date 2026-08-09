@@ -359,6 +359,41 @@ a:focus-visible {
   background: #4536bd;
 }
 
+.booking-error {
+  width: min(calc(100% - 3rem), 1120px);
+  margin: 2rem auto 6rem;
+  padding: 2.5rem 1.5rem;
+  border: 1px solid #f5c2c7;
+  border-radius: 1rem;
+  background: #fff5f5;
+  text-align: center;
+}
+
+.booking-error .section-label {
+  color: #b42318;
+}
+
+.booking-error h2 {
+  margin: 0;
+  color: #172033;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.booking-error > p:not(.section-label) {
+  margin: 1rem auto 0;
+  color: #667085;
+  line-height: 1.7;
+}
+
+.booking-error .booking-error-selection {
+  color: #344054;
+  font-weight: 700;
+}
+
+.booking-error .confirm-button {
+  margin-top: 1.5rem;
+}
+
 @media (max-width: 600px) {
   .booking-success-details {
     grid-template-columns: 1fr;

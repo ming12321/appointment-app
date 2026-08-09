@@ -30,18 +30,42 @@ const selectedService = ref(null);
 const selectedSlot = ref("");
 const bookingStatus = ref("idle");
 const confirmedBooking = ref(null);
+const errorMessage = ref("");
+
+let latestRequestId = 0;
+
+// 開發模式下，網址帶有 ?simulateError=1 時，下一次預約會失敗
+let shouldFailNextRequest =
+  import.meta.env.DEV &&
+  new URLSearchParams(window.location.search).get("simulateError") === "1";
 
 function selectService(service) {
+  // 讓正在等待的舊請求失效
+  latestRequestId += 1;
+
   selectedService.value = service;
   selectedSlot.value = "";
   bookingStatus.value = "idle";
   confirmedBooking.value = null;
+  errorMessage.value = "";
 }
 
 function wait(milliseconds) {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
+}
+
+// 暫時模擬後端 API
+async function createBooking(bookingData) {
+  await wait(800);
+
+  if (shouldFailNextRequest) {
+    shouldFailNextRequest = false;
+    throw new Error("網路連線不穩定，請稍後再試。");
+  }
+
+  return bookingData;
 }
 
 async function confirmBooking() {
@@ -60,24 +84,45 @@ async function confirmBooking() {
     slot: selectedSlot.value,
   };
 
+  const requestId = ++latestRequestId;
+
   bookingStatus.value = "submitting";
+  confirmedBooking.value = null;
+  errorMessage.value = "";
 
-  // 暫時模擬 API 回應時間
-  await wait(800);
+  try {
+    const result = await createBooking(bookingData);
 
-  // 若等待期間使用者改選服務，就取消舊結果
-  if (bookingStatus.value !== "submitting") {
-    return;
+    // 如果這不是最新請求，就不更新畫面
+    if (requestId !== latestRequestId) {
+      return;
+    }
+
+    confirmedBooking.value = result;
+    bookingStatus.value = "success";
+  } catch (error) {
+    if (requestId !== latestRequestId) {
+      return;
+    }
+
+    errorMessage.value =
+      error instanceof Error ? error.message : "預約失敗，請稍後再試。";
+
+    bookingStatus.value = "error";
   }
+}
 
-  confirmedBooking.value = bookingData;
-  bookingStatus.value = "success";
+function retryBooking() {
+  confirmBooking();
 }
 
 function resetBooking() {
+  latestRequestId += 1;
+
   selectedService.value = null;
   selectedSlot.value = "";
   confirmedBooking.value = null;
+  errorMessage.value = "";
   bookingStatus.value = "idle";
 }
 </script>
@@ -124,7 +169,11 @@ function resetBooking() {
       </section>
 
       <BookingPanel
-        v-if="selectedService && bookingStatus !== 'success'"
+        v-if="
+          selectedService &&
+          bookingStatus !== 'success' &&
+          bookingStatus !== 'error'
+        "
         v-model="selectedSlot"
         :service="selectedService"
         :slots="availableSlots"
@@ -133,14 +182,37 @@ function resetBooking() {
       />
 
       <section
-        v-else-if="confirmedBooking"
+        v-if="bookingStatus === 'error' && selectedService"
+        class="booking-error"
+        role="alert"
+        aria-labelledby="error-title"
+      >
+        <p class="section-label">預約失敗</p>
+
+        <h2 id="error-title">這次沒有完成預約</h2>
+
+        <p>{{ errorMessage }}</p>
+
+        <p class="booking-error-selection">
+          已保留：{{ selectedService.name }}・{{ selectedSlot }}
+        </p>
+
+        <button type="button" class="confirm-button" @click="retryBooking">
+          重新嘗試
+        </button>
+      </section>
+
+      <section
+        v-if="bookingStatus === 'success' && confirmedBooking"
         class="booking-success"
         role="status"
         aria-live="polite"
         aria-labelledby="success-title"
       >
         <p class="section-label">預約完成</p>
+
         <h2 id="success-title">你的預約已建立</h2>
+
         <p>我們已收到預約資料，請依照預約時間準時使用服務。</p>
 
         <dl class="booking-success-details">
