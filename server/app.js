@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
-import { appointments } from "./data/appointments.js";
 import { services } from "./data/services.js";
 import { slots } from "./data/slots.js";
+import {
+  findAppointmentBySlot,
+  getBookedSlots,
+  saveAppointment,
+} from "./repositories/appointmentRepository.js";
 
 const app = express();
-
 
 // 讓伺服器能解析 JSON 格式的請求內容
 app.use(express.json());
@@ -30,9 +33,7 @@ app.get("/api/services", (request, response) => {
 
 // 取得所有時段及其可用狀態
 app.get("/api/slots", (request, response) => {
-  const bookedSlots = new Set(
-    appointments.map((appointment) => appointment.slot),
-  );
+  const bookedSlots = new Set(getBookedSlots());
 
   const slotAvailability = slots.map((slot) => ({
     value: slot,
@@ -52,7 +53,6 @@ app.get("/api/slots", (request, response) => {
 app.post("/api/appointments", (request, response) => {
   const { serviceId, slot } = request.body ?? {};
 
-  // 驗證基本資料型態
   if (!Number.isInteger(serviceId) || typeof slot !== "string") {
     return response.status(400).json({
       error: {
@@ -64,7 +64,6 @@ app.post("/api/appointments", (request, response) => {
 
   const normalizedSlot = slot.trim();
 
-  // 驗證時段是否存在
   if (!slots.includes(normalizedSlot)) {
     return response.status(400).json({
       error: {
@@ -74,7 +73,6 @@ app.post("/api/appointments", (request, response) => {
     });
   }
 
-  // 從後端資料尋找服務，不信任前端傳來的服務名稱與時間
   const service = services.find((item) => item.id === serviceId);
 
   if (!service) {
@@ -86,12 +84,10 @@ app.post("/api/appointments", (request, response) => {
     });
   }
 
-  // 防止同一時段被重複預約
-  const hasConflict = appointments.some(
-    (appointment) => appointment.slot === normalizedSlot,
-  );
+  const conflictingAppointment =
+    findAppointmentBySlot(normalizedSlot);
 
-  if (hasConflict) {
+  if (conflictingAppointment) {
     return response.status(409).json({
       error: {
         code: "SLOT_CONFLICT",
@@ -109,7 +105,27 @@ app.post("/api/appointments", (request, response) => {
     createdAt: new Date().toISOString(),
   };
 
-  appointments.push(appointment);
+  try {
+    saveAppointment(appointment);
+  } catch (error) {
+    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return response.status(409).json({
+        error: {
+          code: "SLOT_CONFLICT",
+          message: "此時段已被預約，請選擇其他時段。",
+        },
+      });
+    }
+
+    console.error("Failed to save appointment:", error);
+
+    return response.status(500).json({
+      error: {
+        code: "DATABASE_ERROR",
+        message: "建立預約時發生錯誤，請稍後再試。",
+      },
+    });
+  }
 
   return response.status(201).json({
     data: appointment,
