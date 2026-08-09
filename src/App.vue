@@ -1,31 +1,14 @@
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import ServiceCard from "./components/ServiceCard.vue";
 import BookingPanel from "./components/BookingPanel.vue";
 import { createAppointment } from "./services/appointmentApi.js";
-
-const services = [
-  {
-    id: 1,
-    name: "一般諮詢",
-    duration: "30 分鐘",
-    description: "適合第一次了解服務內容的使用者。",
-  },
-  {
-    id: 2,
-    name: "專業諮詢",
-    duration: "60 分鐘",
-    description: "由專業人員提供完整的需求評估。",
-  },
-  {
-    id: 3,
-    name: "回訪服務",
-    duration: "45 分鐘",
-    description: "適合已使用過服務，需要後續追蹤的使用者。",
-  },
-];
+import { getServices } from "./services/serviceApi.js";
 
 const availableSlots = ["上午 09:00", "上午 10:30", "下午 02:00", "下午 03:30"];
+const services = ref([]);
+const servicesStatus = ref("loading");
+const servicesErrorMessage = ref("");
 
 const selectedService = ref(null);
 const selectedSlot = ref("");
@@ -34,6 +17,22 @@ const confirmedBooking = ref(null);
 const errorMessage = ref("");
 
 let latestRequestId = 0;
+
+async function loadServices() {
+  servicesStatus.value = "loading";
+  servicesErrorMessage.value = "";
+
+  try {
+    services.value = await getServices();
+    servicesStatus.value = "success";
+  } catch {
+    services.value = [];
+    servicesStatus.value = "error";
+    servicesErrorMessage.value = "服務載入失敗，請稍後再試。";
+  }
+}
+
+onMounted(loadServices);
 
 function selectService(service) {
   // 讓先前仍在等待的請求失效
@@ -136,7 +135,32 @@ function resetBooking() {
           <h2 id="services-title">選擇你需要的服務</h2>
         </div>
 
-        <div class="service-list">
+        <div
+          v-if="servicesStatus === 'loading'"
+          class="service-feedback"
+          role="status"
+          aria-live="polite"
+        >
+          <p>正在載入服務項目…</p>
+        </div>
+
+        <div
+          v-else-if="servicesStatus === 'error'"
+          class="service-feedback"
+          role="alert"
+        >
+          <p>{{ servicesErrorMessage }}</p>
+
+          <button type="button" class="confirm-button" @click="loadServices">
+            重新載入
+          </button>
+        </div>
+
+        <div v-else-if="services.length === 0" class="service-feedback">
+          <p>目前沒有可預約的服務。</p>
+        </div>
+
+        <div v-else class="service-list">
           <ServiceCard
             v-for="service in services"
             :key="service.id"
