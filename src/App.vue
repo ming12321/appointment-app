@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import ServiceCard from "./components/ServiceCard.vue";
+import BookingPanel from "./components/BookingPanel.vue";
 
 const services = [
   {
@@ -87,51 +88,13 @@ function confirmBooking() {
         </div>
       </section>
 
-      <section
+      <BookingPanel
         v-if="selectedService"
-        class="booking-panel"
-        aria-labelledby="booking-title"
-      >
-        <div class="booking-summary">
-          <p>已選擇服務</p>
-
-          <h3 id="booking-title">
-            {{ selectedService.name }}
-          </h3>
-
-          <p>服務時間：{{ selectedService.duration }}</p>
-        </div>
-
-        <fieldset class="slot-fieldset">
-          <legend>選擇可預約時段</legend>
-
-          <div class="slot-list">
-            <label
-              v-for="slot in availableSlots"
-              :key="slot"
-              class="slot-option"
-            >
-              <input
-                v-model="selectedSlot"
-                type="radio"
-                name="appointment-slot"
-                :value="slot"
-              />
-
-              <span>{{ slot }}</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <button
-          type="button"
-          class="confirm-button"
-          :disabled="!selectedSlot"
-          @click="confirmBooking"
-        >
-          確認預約
-        </button>
-      </section>
+        v-model="selectedSlot"
+        :service="selectedService"
+        :slots="availableSlots"
+        @confirm="confirmBooking"
+      />
 
       <section id="about" class="about-section" aria-labelledby="about-title">
         <h2 id="about-title">簡單、清楚、好操作</h2>
