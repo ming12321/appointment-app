@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import ServiceCard from "./components/ServiceCard.vue";
 import BookingPanel from "./components/BookingPanel.vue";
+import { createAppointment } from "./services/appointmentApi.js";
 
 const services = [
   {
@@ -34,13 +35,8 @@ const errorMessage = ref("");
 
 let latestRequestId = 0;
 
-// 開發模式下，網址帶有 ?simulateError=1 時，下一次預約會失敗
-let shouldFailNextRequest =
-  import.meta.env.DEV &&
-  new URLSearchParams(window.location.search).get("simulateError") === "1";
-
 function selectService(service) {
-  // 讓正在等待的舊請求失效
+  // 讓先前仍在等待的請求失效
   latestRequestId += 1;
 
   selectedService.value = service;
@@ -48,24 +44,6 @@ function selectService(service) {
   bookingStatus.value = "idle";
   confirmedBooking.value = null;
   errorMessage.value = "";
-}
-
-function wait(milliseconds) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-// 暫時模擬後端 API
-async function createBooking(bookingData) {
-  await wait(800);
-
-  if (shouldFailNextRequest) {
-    shouldFailNextRequest = false;
-    throw new Error("網路連線不穩定，請稍後再試。");
-  }
-
-  return bookingData;
 }
 
 async function confirmBooking() {
@@ -91,7 +69,7 @@ async function confirmBooking() {
   errorMessage.value = "";
 
   try {
-    const result = await createBooking(bookingData);
+    const result = await createAppointment(bookingData);
 
     // 如果這不是最新請求，就不更新畫面
     if (requestId !== latestRequestId) {
