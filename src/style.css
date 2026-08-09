@@ -420,6 +420,99 @@ a:focus-visible {
   margin: 2rem auto 6rem;
 }
 
+.appointments-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 6rem;
+}
+
+.appointment-feedback {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
+  min-height: 180px;
+  padding: 2rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 1rem;
+  color: #667085;
+  background: #fff;
+  text-align: center;
+}
+
+.appointment-feedback p {
+  margin: 0;
+}
+
+.appointment-feedback .confirm-button {
+  width: auto;
+}
+
+.appointment-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appointment-card {
+  height: 100%;
+  padding: 1.5rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(23 32 51 / 7%);
+}
+
+.appointment-card h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 1.35rem;
+}
+
+.appointment-card dl {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.5rem 0 0;
+}
+
+.appointment-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #eaecf0;
+}
+
+.appointment-card dt {
+  color: #667085;
+}
+
+.appointment-card dd {
+  margin: 0;
+  color: #172033;
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (max-width: 800px) {
+  .appointment-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .appointments-section {
+    padding-inline: 1.25rem;
+  }
+
+  .appointment-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 600px) {
   .booking-success-details {
     grid-template-columns: 1fr;

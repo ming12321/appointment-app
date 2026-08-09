@@ -30,6 +30,22 @@ const insertAppointmentStatement = database.prepare(`
   VALUES (?, ?, ?, ?, ?, ?)
 `);
 
+const listAppointmentsStatement = database.prepare(`
+  SELECT
+    id,
+    service_id AS serviceId,
+    service_name AS serviceName,
+    duration_minutes AS durationMinutes,
+    slot,
+    created_at AS createdAt
+  FROM appointments
+  ORDER BY created_at DESC
+`);
+
+export function getAppointments() {
+  return listAppointmentsStatement.all();
+}
+
 export function getBookedSlots() {
   return bookedSlotsStatement.all().map((appointment) => appointment.slot);
 }

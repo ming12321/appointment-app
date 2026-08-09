@@ -2,9 +2,13 @@
 import { onMounted, ref } from "vue";
 import ServiceCard from "./components/ServiceCard.vue";
 import BookingPanel from "./components/BookingPanel.vue";
-import { createAppointment } from "./services/appointmentApi.js";
+import {
+  createAppointment,
+  getAppointments,
+} from "./services/appointmentApi.js";
 import { getServices } from "./services/serviceApi.js";
 import { getAvailableSlots } from "./services/slotApi.js";
+import AppointmentList from "./components/AppointmentList.vue";
 
 const services = ref([]);
 const servicesStatus = ref("loading");
@@ -19,6 +23,9 @@ const selectedSlot = ref("");
 const bookingStatus = ref("idle");
 const confirmedBooking = ref(null);
 const errorMessage = ref("");
+const appointments = ref([]);
+const appointmentsStatus = ref("loading");
+const appointmentsErrorMessage = ref("");
 
 let latestRequestId = 0;
 let latestSlotsRequestId = 0;
@@ -66,7 +73,25 @@ async function loadAvailableSlots() {
   }
 }
 
-onMounted(loadServices);
+async function loadAppointments() {
+  appointmentsStatus.value = "loading";
+  appointmentsErrorMessage.value = "";
+
+  try {
+    appointments.value = await getAppointments();
+    appointmentsStatus.value = "success";
+  } catch (error) {
+    appointments.value = [];
+    appointmentsStatus.value = "error";
+    appointmentsErrorMessage.value =
+      error instanceof Error ? error.message : "無法載入預約紀錄，請稍後再試。";
+  }
+}
+
+onMounted(() => {
+  loadServices();
+  loadAppointments();
+});
 
 function selectService(service) {
   // 讓先前仍在等待的預約請求失效
@@ -113,6 +138,7 @@ async function confirmBooking() {
 
     confirmedBooking.value = result;
     bookingStatus.value = "success";
+    loadAppointments();
   } catch (error) {
     if (requestId !== latestRequestId) {
       return;
@@ -313,6 +339,13 @@ function resetBooking() {
           預約其他服務
         </button>
       </section>
+
+      <AppointmentList
+        :appointments="appointments"
+        :status="appointmentsStatus"
+        :error-message="appointmentsErrorMessage"
+        @retry="loadAppointments"
+      />
 
       <section id="about" class="about-section" aria-labelledby="about-title">
         <h2 id="about-title">簡單、清楚、好操作</h2>

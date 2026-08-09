@@ -4,6 +4,7 @@ import { services } from "./data/services.js";
 import { slots } from "./data/slots.js";
 import {
   findAppointmentBySlot,
+  getAppointments,
   getBookedSlots,
   saveAppointment,
 } from "./repositories/appointmentRepository.js";
@@ -45,6 +46,18 @@ app.get("/api/slots", (request, response) => {
     meta: {
       total: slotAvailability.length,
       available: slotAvailability.filter((slot) => slot.isAvailable).length,
+    },
+  });
+});
+
+// 取得所有預約紀錄
+app.get("/api/appointments", (request, response) => {
+  const appointments = getAppointments();
+
+  response.status(200).json({
+    data: appointments,
+    meta: {
+      total: appointments.length,
     },
   });
 });
