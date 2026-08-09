@@ -28,22 +28,57 @@ const availableSlots = ["上午 09:00", "上午 10:30", "下午 02:00", "下午 
 
 const selectedService = ref(null);
 const selectedSlot = ref("");
+const bookingStatus = ref("idle");
+const confirmedBooking = ref(null);
 
 function selectService(service) {
   selectedService.value = service;
   selectedSlot.value = "";
+  bookingStatus.value = "idle";
+  confirmedBooking.value = null;
 }
 
-function confirmBooking() {
-  if (!selectedService.value || !selectedSlot.value) {
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+async function confirmBooking() {
+  if (
+    !selectedService.value ||
+    !selectedSlot.value ||
+    bookingStatus.value === "submitting"
+  ) {
     return;
   }
 
-  console.log("預約資料：", {
+  const bookingData = {
     serviceId: selectedService.value.id,
     serviceName: selectedService.value.name,
+    duration: selectedService.value.duration,
     slot: selectedSlot.value,
-  });
+  };
+
+  bookingStatus.value = "submitting";
+
+  // 暫時模擬 API 回應時間
+  await wait(800);
+
+  // 若等待期間使用者改選服務，就取消舊結果
+  if (bookingStatus.value !== "submitting") {
+    return;
+  }
+
+  confirmedBooking.value = bookingData;
+  bookingStatus.value = "success";
+}
+
+function resetBooking() {
+  selectedService.value = null;
+  selectedSlot.value = "";
+  confirmedBooking.value = null;
+  bookingStatus.value = "idle";
 }
 </script>
 
@@ -89,12 +124,41 @@ function confirmBooking() {
       </section>
 
       <BookingPanel
-        v-if="selectedService"
+        v-if="selectedService && bookingStatus !== 'success'"
         v-model="selectedSlot"
         :service="selectedService"
         :slots="availableSlots"
+        :is-submitting="bookingStatus === 'submitting'"
         @confirm="confirmBooking"
       />
+
+      <section
+        v-else-if="confirmedBooking"
+        class="booking-success"
+        role="status"
+        aria-live="polite"
+        aria-labelledby="success-title"
+      >
+        <p class="section-label">預約完成</p>
+        <h2 id="success-title">你的預約已建立</h2>
+        <p>我們已收到預約資料，請依照預約時間準時使用服務。</p>
+
+        <dl class="booking-success-details">
+          <div>
+            <dt>服務項目</dt>
+            <dd>{{ confirmedBooking.serviceName }}</dd>
+          </div>
+
+          <div>
+            <dt>預約時段</dt>
+            <dd>{{ confirmedBooking.slot }}</dd>
+          </div>
+        </dl>
+
+        <button type="button" class="confirm-button" @click="resetBooking">
+          預約其他服務
+        </button>
+      </section>
 
       <section id="about" class="about-section" aria-labelledby="about-title">
         <h2 id="about-title">簡單、清楚、好操作</h2>

@@ -12,6 +12,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  isSubmitting: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "confirm"]);
@@ -21,7 +25,7 @@ function selectSlot(slot) {
 }
 
 function handleConfirm() {
-  if (!props.modelValue) {
+  if (!props.modelValue || props.isSubmitting) {
     return;
   }
 
@@ -62,10 +66,11 @@ function handleConfirm() {
     <button
       type="button"
       class="confirm-button"
-      :disabled="!modelValue"
+      :disabled="!modelValue || isSubmitting"
+      :aria-busy="isSubmitting"
       @click="handleConfirm"
     >
-      確認預約
+      {{ isSubmitting ? "預約處理中…" : "確認預約" }}
     </button>
   </section>
 </template>
