@@ -10,14 +10,24 @@ const LEGACY_USER = {
   role: "customer",
 };
 
+const GUEST_USER = {
+  id: "guest-user",
+  name: "訪客使用者",
+  email: "guest@appointment.local",
+  passwordHash: "disabled",
+  role: "customer",
+};
+
 function tableExists(database, tableName) {
   const result = database
-    .prepare(`
+    .prepare(
+      `
       SELECT 1
       FROM sqlite_master
       WHERE type = 'table'
         AND name = ?
-    `)
+    `,
+    )
     .get(tableName);
 
   return Boolean(result);
@@ -30,10 +40,7 @@ function columnExists(database, tableName, columnName) {
 }
 
 export function migrateToRelationalSchema(database, schemaSql) {
-  const currentVersion = database.pragma(
-    "user_version",
-    { simple: true },
-  );
+  const currentVersion = database.pragma("user_version", { simple: true });
 
   if (currentVersion >= TARGET_SCHEMA_VERSION) {
     return {
@@ -44,26 +51,21 @@ export function migrateToRelationalSchema(database, schemaSql) {
     };
   }
 
-  const appointmentsTableExists = tableExists(
-    database,
-    "appointments",
-  );
+  const appointmentsTableExists = tableExists(database, "appointments");
 
   const isLegacySchema =
     appointmentsTableExists &&
     columnExists(database, "appointments", "service_name") &&
-    columnExists(
-      database,
-      "appointments",
-      "duration_minutes",
-    );
+    columnExists(database, "appointments", "duration_minutes");
 
   const legacyAppointmentCount = isLegacySchema
     ? database
-        .prepare(`
+        .prepare(
+          `
           SELECT COUNT(*) AS count
           FROM appointments
-        `)
+        `,
+        )
         .get().count
     : 0;
 
@@ -96,10 +98,33 @@ export function migrateToRelationalSchema(database, schemaSql) {
         service.durationMinutes,
       );
     }
+    database
+      .prepare(
+        `
+    INSERT INTO users (
+      id,
+      name,
+      email,
+      password_hash,
+      role,
+      is_active
+    )
+    VALUES (?, ?, ?, ?, ?, 1)
+    ON CONFLICT(id) DO NOTHING
+  `,
+      )
+      .run(
+        GUEST_USER.id,
+        GUEST_USER.name,
+        GUEST_USER.email,
+        GUEST_USER.passwordHash,
+        GUEST_USER.role,
+      );
 
     if (isLegacySchema && legacyAppointmentCount > 0) {
       database
-        .prepare(`
+        .prepare(
+          `
           INSERT INTO users (
             id,
             name,
@@ -110,7 +135,8 @@ export function migrateToRelationalSchema(database, schemaSql) {
           )
           VALUES (?, ?, ?, ?, ?, 0)
           ON CONFLICT(id) DO NOTHING
-        `)
+        `,
+        )
         .run(
           LEGACY_USER.id,
           LEGACY_USER.name,
@@ -120,7 +146,8 @@ export function migrateToRelationalSchema(database, schemaSql) {
         );
 
       database
-        .prepare(`
+        .prepare(
+          `
           INSERT INTO appointments (
             id,
             user_id,
@@ -139,7 +166,8 @@ export function migrateToRelationalSchema(database, schemaSql) {
             created_at,
             created_at
           FROM appointments_legacy
-        `)
+        `,
+        )
         .run(LEGACY_USER.id);
     }
 
@@ -149,9 +177,7 @@ export function migrateToRelationalSchema(database, schemaSql) {
       `);
     }
 
-    database.pragma(
-      `user_version = ${TARGET_SCHEMA_VERSION}`,
-    );
+    database.pragma(`user_version = ${TARGET_SCHEMA_VERSION}`);
   });
 
   runMigration();

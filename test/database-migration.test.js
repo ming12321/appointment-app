@@ -16,10 +16,7 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
     path.join(os.tmpdir(), "appointment-migration-test-"),
   );
 
-  const databasePath = path.join(
-    temporaryDirectory,
-    "appointments.sqlite",
-  );
+  const databasePath = path.join(temporaryDirectory, "appointments.sqlite");
 
   const database = new Database(databasePath);
   database.pragma("foreign_keys = ON");
@@ -62,10 +59,7 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
         );
     `);
 
-    const firstRun = migrateToRelationalSchema(
-      database,
-      schemaSql,
-    );
+    const firstRun = migrateToRelationalSchema(database, schemaSql);
 
     assert.deepEqual(firstRun, {
       migrated: true,
@@ -74,10 +68,7 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
       migratedAppointments: 2,
     });
 
-    const secondRun = migrateToRelationalSchema(
-      database,
-      schemaSql,
-    );
+    const secondRun = migrateToRelationalSchema(database, schemaSql);
 
     assert.deepEqual(secondRun, {
       migrated: false,
@@ -87,35 +78,24 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
     });
 
     const tables = database
-      .prepare(`
+      .prepare(
+        `
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
         ORDER BY name
-      `)
+      `,
+      )
       .all()
       .map((table) => table.name);
 
-    assert.deepEqual(tables, [
-      "appointments",
-      "services",
-      "users",
-    ]);
+    assert.deepEqual(tables, ["appointments", "services", "users"]);
 
-    assert.equal(
-      database.pragma("user_version", { simple: true }),
-      1,
-    );
+    assert.equal(database.pragma("user_version", { simple: true }), 1);
 
-    assert.equal(
-      database.pragma("integrity_check", { simple: true }),
-      "ok",
-    );
+    assert.equal(database.pragma("integrity_check", { simple: true }), "ok");
 
-    assert.deepEqual(
-      database.pragma("foreign_key_check"),
-      [],
-    );
+    assert.deepEqual(database.pragma("foreign_key_check"), []);
 
     const appointmentColumns = database
       .pragma("table_info(appointments)")
@@ -133,31 +113,42 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
 
     assert.equal(
       database
-        .prepare(`
+        .prepare(
+          `
           SELECT COUNT(*) AS count
           FROM services
-        `)
+        `,
+        )
         .get().count,
       3,
     );
 
-    const legacyUser = database
-      .prepare(`
-        SELECT
-          id,
-          is_active AS isActive
-        FROM users
-        WHERE id = ?
-      `)
-      .get("legacy-user");
+    const users = database
+      .prepare(
+        `
+    SELECT
+      id,
+      is_active AS isActive
+    FROM users
+    ORDER BY id
+  `,
+      )
+      .all();
 
-    assert.deepEqual(legacyUser, {
-      id: "legacy-user",
-      isActive: 0,
-    });
+    assert.deepEqual(users, [
+      {
+        id: "guest-user",
+        isActive: 1,
+      },
+      {
+        id: "legacy-user",
+        isActive: 0,
+      },
+    ]);
 
     const appointments = database
-      .prepare(`
+      .prepare(
+        `
         SELECT
           appointments.id,
           appointments.user_id AS userId,
@@ -169,7 +160,8 @@ test("將舊資料庫遷移成關聯式結構並保留預約", () => {
         JOIN services
           ON services.id = appointments.service_id
         ORDER BY appointments.id
-      `)
+      `,
+      )
       .all();
 
     assert.deepEqual(appointments, [
